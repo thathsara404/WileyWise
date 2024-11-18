@@ -6,7 +6,7 @@ import logging
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 # OpenAI client (replace with your API key)
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="????")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
