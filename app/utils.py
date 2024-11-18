@@ -60,16 +60,42 @@ def generate_answer_with_quiz(query, content):
         return f"Error generating response: {e}", ""
 
 def find_relevant_content(query, database):
+    """
+    Finds the most relevant content from the database for a given query using cosine similarity.
+    Args:
+        query (str): The user's query.
+        database (list): A list of dictionary entries, each with an "embedding" field.
+
+    Returns:
+        str: The excerpt of the most relevant content or a "not found" message.
+    """
+    logging.info("Starting to find relevant content for the query.")
+    logging.debug(f"Query: {query}")
+    
     # Generate query embedding
+    logging.info("Generating embedding for the query.")
     query_embedding = model.encode(query)
+    logging.debug(f"Query embedding: {query_embedding}")
+
     best_match = None
     highest_similarity = -1
 
     # Find best matching entry
-    for entry in database:
+    logging.info("Iterating through the database to find the best match.")
+    for idx, entry in enumerate(database):
+        logging.debug(f"Processing entry {idx + 1}/{len(database)}: {entry.get('title', 'No Title')}")
         similarity = 1 - cosine(query_embedding, entry["embedding"])
+        logging.debug(f"Computed similarity: {similarity} for entry: {entry.get('title', 'No Title')}")
+
         if similarity > highest_similarity:
             highest_similarity = similarity
             best_match = entry
+            logging.debug(f"New best match found with similarity: {highest_similarity}")
 
-    return best_match["excerpt"] if best_match else "No relevant content found."
+    if best_match:
+        logging.info(f"Best match found with similarity: {highest_similarity}")
+        logging.debug(f"Best match details: {best_match}")
+        return best_match["excerpt"]
+    else:
+        logging.warning("No relevant content found in the database.")
+        return "No relevant content found."
