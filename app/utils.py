@@ -6,16 +6,27 @@ import logging
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 # OpenAI client (replace with your API key)
-client = OpenAI(api_key="?????")
+client = OpenAI(api_key="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")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-def generate_answer_with_quiz(query, content):
+def generate_answer_with_quiz(query, content, strictness):
     try:
         logging.info("Starting to generate an answer for the query.")
         logging.debug(f"Query: {query}")
         logging.debug(f"Content: {content[:100]}...")  # Log first 100 characters of content
+
+        if strictness == "strict":
+            prompt = (
+                f"Using ONLY the following text, answer the question strictly based on the content without adding "
+                f"external information or assumptions.\n\nQuestion: '{query}'\n\nContent: {content}"
+            )
+        else:  # Flexible
+            prompt = (
+                f"Based on the following text, provide a detailed and relevant answer to the question. "
+                f"You may infer additional information if needed.\n\nQuestion: '{query}'\n\nContent: {content}"
+            )
         
         # Generate an answer using the ChatCompletion API
         logging.info("Sending request to OpenAI ChatCompletion API for answer generation.")
@@ -23,7 +34,7 @@ def generate_answer_with_quiz(query, content):
             model="gpt-4o-mini",
             messages = [
                 {"role": "system", "content": "You are a highly precise AI assistant. Answer questions strictly based on the provided content without adding any information beyond the content."},
-                {"role": "user", "content": f"Using ONLY the following text, answer the question strictly based on the content without adding external information or assumptions.\n\nQuestion: '{query}'\n\nContent: {content}"}
+                {"role": "user", "content": prompt}
             ],
             max_tokens=400,
             stream=False,
@@ -40,7 +51,7 @@ def generate_answer_with_quiz(query, content):
         # Generate a quiz using the ChatCompletion API
         logging.info("Sending request to OpenAI ChatCompletion API for quiz generation.")
         quiz_response = client.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o-mini",
         messages=[
             {
                 "role": "system",
@@ -48,6 +59,27 @@ def generate_answer_with_quiz(query, content):
                     "You are a highly precise AI assistant. Generate quiz questions strictly based on the provided content. "
                     "Do not include questions or answers that cannot be derived directly from the content. "
                     "If the content does not include enough information for a quiz, respond with: 'The content does not include sufficient information to generate a quiz.'"
+                    "Format the output as a JSON object with the following structure:\n\n"
+                "{\n"
+                "  'questions': [\n"
+                "    {\n"
+                "      'type': 'True/False',\n"
+                "      'question': '...',\n"
+                "      'correct_answer': '...'\n"
+                "    },\n"
+                "    {\n"
+                "      'type': 'Multiple Choice',\n"
+                "      'question': '...',\n"
+                "      'options': ['a) ...', 'b) ...', 'c) ...', 'd) ...'],\n"
+                "      'correct_answer': '...'\n"
+                "    },\n"
+                "    {\n"
+                "      'type': 'Fill in the Blank',\n"
+                "      'question': '...',\n"
+                "      'correct_answer': '...'\n"
+                "    }\n"
+                "  ]\n"
+                "}\n\n"
                 ),
             },
             {
@@ -94,7 +126,7 @@ def find_relevant_content(query, database):
     logging.debug(f"Query embedding: {query_embedding}")
 
     best_match = None
-    highest_similarity = 0.5
+    highest_similarity = 0.4
 
     # Find best matching entry
     logging.info("Iterating through the database to find the best match.")

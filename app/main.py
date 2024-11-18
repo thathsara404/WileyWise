@@ -17,12 +17,13 @@ def home():
 def ask():
     data = request.json
     query = data.get("query", "")
+    strictness = data.get('strictness')
     if not query:
         return jsonify({"error": "No query provided."}), 400
 
     content = find_relevant_content(query, database)
     if content != "No relevant content found.":
-        answer, quiz = generate_answer_with_quiz(query, content)
+        answer, quiz = generate_answer_with_quiz(query, content, strictness)
         response = {"answer": answer, "quiz": quiz}
     else:
         response = {"error": "No relevant content found in Wiley library."}
