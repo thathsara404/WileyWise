@@ -8,6 +8,13 @@
 <body>
     <h1>Wiley AI Study Assistant</h1>
     <input type="text" id="query" placeholder="Ask a question..." />
+
+    <label for="strictness"> Strictness:</label>
+    <select id="strictness">
+        <option value="strict">Strict</option>
+        <option value="flexible">Flexible</option>
+    </select>
+    
     <button onclick="askQuestion()">Ask</button>
     <h2>Answer:</h2>
     <div id="answer"></div>
