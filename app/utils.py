@@ -21,11 +21,11 @@ def generate_answer_with_quiz(query, content):
         logging.info("Sending request to OpenAI ChatCompletion API for answer generation.")
         answer_response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an AI assistant trained to summarize and answer questions based on content."},
-                {"role": "user", "content": f"Based on the following text, provide a detailed answer to the question: '{query}'\n\nContent: {content}"}
+            messages = [
+                {"role": "system", "content": "You are a highly precise AI assistant. Answer questions strictly based on the provided content without adding any information beyond the content."},
+                {"role": "user", "content": f"Using ONLY the following text, answer the question strictly based on the content without adding external information or assumptions.\n\nQuestion: '{query}'\n\nContent: {content}"}
             ],
-            max_tokens=150,
+            max_tokens=400,
             stream=False,
         )
         
@@ -40,12 +40,28 @@ def generate_answer_with_quiz(query, content):
         # Generate a quiz using the ChatCompletion API
         logging.info("Sending request to OpenAI ChatCompletion API for quiz generation.")
         quiz_response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an AI assistant trained to create quizzes from content."},
-                {"role": "user", "content": f"Based on the following text, generate three quiz questions with answers: one true/false, one multiple-choice, and one fill-in-the-blank.\n\nContent: {content}"}
-            ],
-            max_tokens=150,
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a highly precise AI assistant. Generate quiz questions strictly based on the provided content. "
+                    "Do not include questions or answers that cannot be derived directly from the content. "
+                    "If the content does not include enough information for a quiz, respond with: 'The content does not include sufficient information to generate a quiz.'"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Using ONLY the following text, generate three quiz questions with answers. "
+                    "Ensure that all questions and answers are strictly based on the provided text. "
+                    "Include one true/false question, one multiple-choice question (with four options), and one fill-in-the-blank question. "
+                    "Ensure each question tests a different aspect of the content.\n\n"
+                    f"Content: {content}"
+                ),
+            },
+        ],
+            max_tokens=400,
             stream=False,
         )
 
@@ -78,7 +94,7 @@ def find_relevant_content(query, database):
     logging.debug(f"Query embedding: {query_embedding}")
 
     best_match = None
-    highest_similarity = -1
+    highest_similarity = 0.5
 
     # Find best matching entry
     logging.info("Iterating through the database to find the best match.")
