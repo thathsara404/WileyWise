@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from app.utils import find_relevant_content, generate_answer_with_quiz
 import pickle
 
@@ -7,6 +7,11 @@ app = Flask(__name__)
 # Load precomputed database
 with open("app/data/database.pkl", "rb") as f:
     database = pickle.load(f)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
 
 @app.route('/ask', methods=['POST'])
 def ask():
