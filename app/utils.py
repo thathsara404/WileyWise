@@ -7,7 +7,7 @@ import re
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 # OpenAI client (replace with your API key)
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="????")
 
 # In-memory cache to store embeddings and responses
 cache = {}
