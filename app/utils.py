@@ -41,7 +41,7 @@ def cache_response(question, embedding, answer, quiz, strictness):
         "strictness": strictness,
     }
 
-def find_similar_question(query_embedding, strictness, threshold=0.6):
+def find_similar_question(query_embedding, strictness, threshold=0.9):
     """
     Check the cache for a similar question based on cosine similarity and strictness.
     Returns the cached question and response if a match is found.
@@ -83,13 +83,20 @@ def generate_answer_with_quiz(query, content, strictness):
 
         if strictness == "strict":
             prompt = (
-                f"Using ONLY the following text, answer the question strictly based on the content without adding "
-                f"external information or assumptions.\n\nQuestion: '{query}'\n\nContent: {content}"
+                f"Provide a concise and accurate answer to the following question using only the information provided in the content. "
+                f"If the content does not provide enough information to answer the question, respond with: "
+                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the provided link for more details.' "
+                f"Do not add any external information or assumptions.\n\n"
+                f"Question: '{query}'\n\nContent: {content}"
             )
         else:  # Flexible
             prompt = (
-                f"Based on the following text, provide a detailed and relevant answer to the question. "
-                f"You may infer additional information if needed.\n\nQuestion: '{query}'\n\nContent: {content}"
+                f"Provide a detailed and thoughtful answer to the following question using the content provided. "
+                f"You may infer additional information if needed. "
+                f"If the content does not provide enough information, respond with: "
+                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the provided link for more details.' "
+                f"The answer should sound natural and self-contained.\n\n"
+                f"Question: '{query}'\n\nContent: {content}"
             )
 
         # Generate an answer using the ChatCompletion API
@@ -207,8 +214,14 @@ def find_relevant_content(query, database):
     if best_match:
         logging.info(f"Best match found with similarity: {highest_similarity}")
         logging.debug(f"Best match details: {best_match}")
-        return best_match["excerpt"]
+        return {
+            "excerpt": best_match["excerpt"],
+            "link": best_match["link"]
+        }
     else:
         logging.warning("No relevant content found in the database.")
-        return "No relevant content found."
+        return {
+            "excerpt": "No relevant content found.",
+            "link": None
+        }
 

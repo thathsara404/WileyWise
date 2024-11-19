@@ -31,7 +31,15 @@ async function askQuestion() {
     // Display the answer
     document.getElementById("answer").innerText = data.answer || data.error;
 
-
+    // Display the link if available
+    const articleLink = document.getElementById("article-link");
+    if (data.link && data.link !== "No link available") {
+        articleLink.href = data.link;
+        articleLink.classList.remove("hidden");
+    } else {
+        articleLink.classList.add("hidden");
+    }
+    
     // Parse and render the quiz
     if (data.quiz) {
         const quizData = JSON.parse(data.quiz.replace(/'/g, '"')); // Replace single quotes with double quotes for valid JSON
