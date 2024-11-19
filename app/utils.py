@@ -2,20 +2,84 @@ from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 from scipy.spatial.distance import cosine
 import logging
+import re
 
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 # OpenAI client (replace with your API key)
-client = OpenAI(api_key="????")
+client = OpenAI(api_key="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")
+
+# In-memory cache to store embeddings and responses
+cache = {}
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+def normalize_text(text):
+    """Normalize text by lowercasing and removing extra spaces and punctuation."""
+    text = text.lower()
+    text = re.sub(r'\s+', ' ', text)  # Replace multiple spaces with a single space
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+    return text.strip()
+
+def generate_embeddings(text):
+    """Generate embeddings for a given text."""
+    return model.encode(text)
+
+def cache_response(question, embedding, answer, quiz, strictness):
+    """Store the question, embedding, answer, and quiz in the cache."""
+    # Combine normalized question and strictness as the cache key
+    normalized_question = normalize_text(question)  # Normalize before caching
+    cache_key = f"{normalized_question}::{strictness}"  # Use strictness as part of the key
+    logging.info(f"Caching response for question: '{normalized_question}' with strictness: '{strictness}'")
+    
+    # Store the response in the cache
+    cache[cache_key] = {
+        "embedding": embedding,
+        "answer": answer,
+        "quiz": quiz,
+        "strictness": strictness,
+    }
+
+def find_similar_question(query_embedding, strictness, threshold=0.6):
+    """
+    Check the cache for a similar question based on cosine similarity and strictness.
+    Returns the cached question and response if a match is found.
+    """
+    for cache_key, data in cache.items():
+        # Split the cache key into question and strictness
+        cached_question, cached_strictness = cache_key.rsplit("::", 1)
+        if cached_strictness != strictness:  # Skip entries with a different strictness
+            continue
+
+        cached_embedding = data["embedding"]
+        similarity = 1 - cosine(query_embedding, cached_embedding)
+        logging.info(f"Computed similarity with cached question '{cached_question}' (strictness: {cached_strictness}): {similarity}")
+
+        if similarity >= threshold:
+            logging.debug(f"Cache hit for question: '{cached_question}' with strictness: '{cached_strictness}' (similarity: {similarity})")
+            return cached_question, data  # Return cached question and data
+    logging.info("No matching question found in the cache.")
+    return None, None  # No similar question found
 
 def generate_answer_with_quiz(query, content, strictness):
     try:
         logging.info("Starting to generate an answer for the query.")
         logging.debug(f"Query: {query}")
         logging.debug(f"Content: {content[:100]}...")  # Log first 100 characters of content
+
+        # Normalize query and generate embedding
+        query = normalize_text(query)
+        query_embedding = generate_embeddings(query)
+
+        # Check the cache for similar questions
+        cached_question, cached_data = find_similar_question(query_embedding, strictness)
+        if cached_data:
+            logging.info(f"Returning cached response for question: '{cached_question}'")
+            return cached_data["answer"], cached_data["quiz"]
+
+        # If no cached response, proceed to call OpenAI API
+        logging.info("No cached response found. Generating a new response.")
 
         if strictness == "strict":
             prompt = (
@@ -27,86 +91,86 @@ def generate_answer_with_quiz(query, content, strictness):
                 f"Based on the following text, provide a detailed and relevant answer to the question. "
                 f"You may infer additional information if needed.\n\nQuestion: '{query}'\n\nContent: {content}"
             )
-        
+
         # Generate an answer using the ChatCompletion API
         logging.info("Sending request to OpenAI ChatCompletion API for answer generation.")
         answer_response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages = [
+            messages=[
                 {"role": "system", "content": "You are a highly precise AI assistant. Answer questions strictly based on the provided content without adding any information beyond the content."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=400,
             stream=False,
         )
-        
-        # Log the raw 'choices' object
-        logging.debug(f"Raw answer response 'choices': {answer_response}")
 
         # Extract the answer
-        answer = answer_response.choices[0].message.content
+        answer = answer_response.choices[0].message.content.strip()
         logging.info("Answer generation completed successfully.")
         logging.debug(f"Generated answer: {answer}")
 
         # Generate a quiz using the ChatCompletion API
         logging.info("Sending request to OpenAI ChatCompletion API for quiz generation.")
         quiz_response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a highly precise AI assistant. Generate quiz questions strictly based on the provided content. "
-                    "Do not include questions or answers that cannot be derived directly from the content. "
-                    "If the content does not include enough information for a quiz, respond with: 'The content does not include sufficient information to generate a quiz.'"
-                    "Format the output as a JSON object with the following structure:\n\n"
-                "{\n"
-                "  'questions': [\n"
-                "    {\n"
-                "      'type': 'True/False',\n"
-                "      'question': '...',\n"
-                "      'correct_answer': '...'\n"
-                "    },\n"
-                "    {\n"
-                "      'type': 'Multiple Choice',\n"
-                "      'question': '...',\n"
-                "      'options': ['a) ...', 'b) ...', 'c) ...', 'd) ...'],\n"
-                "      'correct_answer': '...'\n"
-                "    },\n"
-                "    {\n"
-                "      'type': 'Fill in the Blank',\n"
-                "      'question': '...',\n"
-                "      'correct_answer': '...'\n"
-                "    }\n"
-                "  ]\n"
-                "}\n\n"
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Using ONLY the following text, generate three quiz questions with answers. "
-                    "Ensure that all questions and answers are strictly based on the provided text. "
-                    "Include one true/false question, one multiple-choice question (with four options), and one fill-in-the-blank question. "
-                    "Ensure each question tests a different aspect of the content.\n\n"
-                    f"Content: {content}"
-                ),
-            },
-        ],
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a highly precise AI assistant. Generate quiz questions strictly based on the provided content. "
+                        "Do not include questions or answers that cannot be derived directly from the content. "
+                        "If the content does not include enough information for a quiz, respond with: 'The content does not include sufficient information to generate a quiz.'"
+                        "Format the output as a JSON object with the following structure:\n\n"
+                        "{\n"
+                        "  'questions': [\n"
+                        "    {\n"
+                        "      'type': 'True/False',\n"
+                        "      'question': '...',\n"
+                        "      'correct_answer': '...'\n"
+                        "    },\n"
+                        "    {\n"
+                        "      'type': 'Multiple Choice',\n"
+                        "      'question': '...',\n"
+                        "      'options': ['a) ...', 'b) ...', 'c) ...', 'd) ...'],\n"
+                        "      'correct_answer': '...'\n"
+                        "    },\n"
+                        "    {\n"
+                        "      'type': 'Fill in the Blank',\n"
+                        "      'question': '...',\n"
+                        "      'correct_answer': '...'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}\n\n"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Using ONLY the following text, generate three quiz questions with answers. "
+                        "Ensure that all questions and answers are strictly based on the provided text. "
+                        "Include one true/false question, one multiple-choice question (with four options), and one fill-in-the-blank question. "
+                        "Ensure each question tests a different aspect of the content.\n\n"
+                        f"Content: {content}"
+                    ),
+                },
+            ],
             max_tokens=400,
             stream=False,
         )
 
         # Extract the quiz
-        quiz = quiz_response.choices[0].message.content
+        quiz = quiz_response.choices[0].message.content.strip()
         logging.info("Quiz generation completed successfully.")
         logging.debug(f"Generated quiz: {quiz}")
+
+        # Cache the response
+        cache_response(query, query_embedding, answer, quiz, strictness)
 
         return answer, quiz
     except Exception as e:
         logging.error("An error occurred during answer or quiz generation.", exc_info=True)
         return f"Error generating response: {e}", ""
-
+    
 def find_relevant_content(query, database):
     """
     Finds the most relevant content from the database for a given query using cosine similarity.
@@ -147,3 +211,4 @@ def find_relevant_content(query, database):
     else:
         logging.warning("No relevant content found in the database.")
         return "No relevant content found."
+
