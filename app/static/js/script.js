@@ -1,3 +1,4 @@
+let savedConversations = []; // Array to store saved conversations
 
 async function askQuestion() {
     const query = document.getElementById("query").value;
@@ -24,9 +25,9 @@ async function askQuestion() {
         spinner.classList.add("d-none");
     }
 
-    const generatedSectoin = document.getElementById("generated");
-    generatedSectoin.classList.remove("hidden");
-    generatedSectoin.classList.add("fade-in");
+    const generatedSection = document.getElementById("generated");
+    generatedSection.classList.remove("hidden");
+    generatedSection.classList.add("fade-in");
 
     // Display the answer
     document.getElementById("answer").innerText = data.answer || data.error;
@@ -39,7 +40,7 @@ async function askQuestion() {
     } else {
         articleLink.classList.add("hidden");
     }
-    
+
     // Parse and render the quiz
     if (data.quiz) {
         const quizData = JSON.parse(data.quiz.replace(/'/g, '"')); // Replace single quotes with double quotes for valid JSON
@@ -61,13 +62,14 @@ function renderQuiz(quizData) {
         questionText.className = "fw-bold";
         questionDiv.appendChild(questionText);
 
-        // Render True/False questions explicitly
+        // Render True/False questions
         if (q.type === "True/False") {
             ["True", "False"].forEach((option) => {
                 const button = document.createElement("button");
                 button.textContent = option;
-                button.className = "btn btn-primary text-white me-2 mb-2"; // Ensure text color is white
-                button.onclick = () => checkAnswer(q.correct_answer, option, button);
+                button.className = "btn btn-primary text-white me-2 mb-2";
+                button.setAttribute("data-correct-answer", q.correct_answer);
+                button.onclick = () => checkAnswer(q.correct_answer, option, button, questionDiv);
                 questionDiv.appendChild(button);
             });
         } else if (q.type === "Multiple Choice") {
@@ -75,8 +77,9 @@ function renderQuiz(quizData) {
             q.options.forEach((option) => {
                 const button = document.createElement("button");
                 button.textContent = option;
-                button.className = "btn btn-primary text-white me-2 mb-2"; // Ensure text color is white
-                button.onclick = () => checkAnswer(q.correct_answer, option, button);
+                button.className = "btn btn-primary text-white me-2 mb-2";
+                button.setAttribute("data-correct-answer", q.correct_answer);
+                button.onclick = () => checkAnswer(q.correct_answer, option, button, questionDiv);
                 questionDiv.appendChild(button);
             });
         } else if (q.type === "Fill in the Blank") {
@@ -92,10 +95,11 @@ function renderQuiz(quizData) {
 
             const submitButton = document.createElement("button");
             submitButton.textContent = "Submit";
-            submitButton.className = "btn btn-primary text-white"; // Ensure text color is white
+            submitButton.className = "btn btn-primary text-white";
+            submitButton.setAttribute("data-correct-answer", q.correct_answer);
             submitButton.onclick = () => {
                 const userAnswer = inputBox.value.trim();
-                checkAnswer(q.correct_answer, userAnswer, inputBox);
+                checkAnswer(q.correct_answer, userAnswer, inputBox, questionDiv);
             };
             inputGroup.appendChild(submitButton);
 
@@ -104,53 +108,226 @@ function renderQuiz(quizData) {
 
         quizContainer.appendChild(questionDiv);
     });
+
+    // Add the Retry Button
+    const retryButton = document.createElement("button");
+    retryButton.textContent = "Retry Quiz";
+    retryButton.className = "btn btn-secondary mt-4 retry-button";
+    retryButton.onclick = resetQuiz;
+    quizContainer.appendChild(retryButton);
 }
 
+function resetQuiz() {
+    const quizContainer = document.getElementById("quiz");
 
-function checkAnswer(correctAnswer, userAnswer, element) {
+    // Reset all buttons
+    const buttons = quizContainer.querySelectorAll("button");
+    buttons.forEach((button) => {
+        button.disabled = false;
+        button.style.backgroundColor = ""; // Clear background color
+        button.style.color = ""; // Reset text color
+    });
+
+    // Clear input fields
+    const inputs = quizContainer.querySelectorAll("input");
+    inputs.forEach((input) => {
+        input.value = ""; // Clear input value
+        input.style.backgroundColor = ""; // Reset input background color
+        input.style.color = ""; // Reset input text color if needed
+    });
+
+    // Re-enable submit buttons for Fill-in-the-Blank questions
+    const inputGroups = quizContainer.querySelectorAll(".input-group button");
+    inputGroups.forEach((button) => {
+        button.disabled = false;
+    });
+}
+
+function checkAnswer(correctAnswer, userAnswer, element, questionDiv) {
     const modalTitle = document.getElementById("feedbackModalLabel");
     const modalBody = document.getElementById("feedbackModalBody");
 
-    // Check if the answer is correct
-    if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
-        element.style.backgroundColor = "green"; // Mark as correct
-        element.style.color = "white"; // Ensure text color is white
+    const isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+
+    // Provide visual feedback
+    if (isCorrect) {
+        element.style.backgroundColor = "green";
+        element.style.color = "white";
         modalTitle.textContent = "Correct!";
         modalBody.innerHTML = `<p>Your answer is correct! Great job.</p>`;
     } else {
-        element.style.backgroundColor = "red"; // Mark as incorrect
-        element.style.color = "white"; // Ensure text color is white
+        element.style.backgroundColor = "red";
+        element.style.color = "white";
         modalTitle.textContent = "Incorrect!";
         modalBody.innerHTML = `<p>Oops! The correct answer is: <strong>${correctAnswer}</strong>.</p>`;
     }
 
-    // Show the modal
+    // Disable only the buttons related to the current question
+    const relatedButtons = questionDiv.querySelectorAll("button:not(.retry-button)");
+    relatedButtons.forEach((btn) => {
+        btn.disabled = true;
+    });
+
     const feedbackModal = new bootstrap.Modal(document.getElementById("feedbackModal"));
     feedbackModal.show();
 }
 
 
-// Header Animation
+function saveConversation() {
+    const query = document.getElementById("query").value;
+    const answer = document.getElementById("answer").innerText;
+    const quiz = document.getElementById("quiz").innerHTML;
+    const strictness = document.getElementById("strictness").value;
+
+    if (!query || !answer) {
+        showErrorModal("Error", "Please generate an answer before saving!");
+        return;
+    }
+
+    for (const savedItem of savedConversations) {
+        console.log(savedItem.answer, answer);
+        if (
+            savedItem.query.trim() === query.trim() && 
+            savedItem.strictness === strictness
+        ) {
+            showErrorModal("Duplicate", "This conversation is already saved!");
+            return;
+        }
+
+        if (savedItem.answer.trim() === answer.trim()) {
+            showErrorModal("Duplicate", "This answer is already saved!");
+            return;
+        }
+        
+    }
+
+    const savedItem = { query, answer, quiz, strictness};
+    savedConversations.push(savedItem);
+
+    updateSavedConversations();
+}
+
+
+function showErrorModal(title, message) {
+    const modalTitle = document.getElementById("errorModalTitle");
+    const modalBody = document.getElementById("errorModalBody");
+
+    modalTitle.textContent = title;
+    modalBody.textContent = message;
+
+    const errorModal = new bootstrap.Modal(document.getElementById("errorModal"));
+    errorModal.show();
+}
+
+function updateSavedConversations() {
+    const savedList = document.getElementById("saved-conversations");
+    savedList.innerHTML = ""; // Clear the existing list
+
+    savedConversations.forEach((item, index) => {
+        const listItem = document.createElement("li");
+        listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
+
+        // Add the query and strictness as the list item's text
+        const listItemText = document.createElement("span");
+        listItemText.textContent = `${item.query} - ${item.strictness}`;
+        listItem.appendChild(listItemText);
+
+        // Add a delete button with a bin icon
+        const deleteButton = document.createElement("button");
+        deleteButton.classList.add("btn", "btn-danger", "btn-sm");
+        deleteButton.innerHTML = `<i class="bi bi-trash"></i>`; // Bootstrap bin icon
+        deleteButton.onclick = () => deleteConversation(index);
+        listItem.appendChild(deleteButton);
+
+        // Add a click event to load the saved conversation
+        listItemText.addEventListener("click", () => {
+            loadConversation(index);
+        });
+
+        savedList.appendChild(listItem);
+    });
+}
+
+// Function to delete a conversation
+function deleteConversation(index) {
+    // Remove the selected conversation from the array
+    savedConversations.splice(index, 1);
+
+    // Update the list after deletion
+    updateSavedConversations();
+}
+
+
+function loadConversation(index) {
+    const savedItem = savedConversations[index];
+    document.getElementById("query").value = savedItem.query;
+    document.getElementById("answer").innerText = savedItem.answer;
+
+    // Update strictness dropdown
+    const strictnessDropdown = document.getElementById("strictness");
+    strictnessDropdown.value = savedItem.strictness;
+
+    // Parse the quiz data for rendering
+    const quizContainer = document.getElementById("quiz");
+    quizContainer.innerHTML = savedItem.quiz; // Load the saved quiz HTML directly into the container
+
+    // Reinitialize button functionality in the loaded quiz
+    const questionDivs = quizContainer.querySelectorAll(".question");
+    questionDivs.forEach((questionDiv) => {
+        // Reinitialize buttons for True/False and Multiple Choice questions
+        const buttons = questionDiv.querySelectorAll("button:not(.retry-button)");
+        buttons.forEach((button) => {
+            const correctAnswer = button.getAttribute("data-correct-answer");
+            const userAnswer = button.textContent.trim();
+
+            if (correctAnswer) {
+                button.onclick = () => checkAnswer(correctAnswer, userAnswer, button, questionDiv);
+            }
+        });
+
+        // Reinitialize Submit buttons for Fill-in-the-Blank questions
+        const inputGroupButton = questionDiv.querySelector(".input-group button");
+        const inputField = questionDiv.querySelector(".input-group input");
+
+        if (inputGroupButton && inputField) {
+            const correctAnswer = inputGroupButton.getAttribute("data-correct-answer");
+            inputGroupButton.onclick = () => {
+                const userAnswer = inputField.value.trim();
+                checkAnswer(correctAnswer, userAnswer, inputField, questionDiv);
+            };
+        }
+    });
+
+    // Remove any existing Retry Quiz button
+    const existingRetryButton = quizContainer.querySelector(".retry-button");
+    if (existingRetryButton) {
+        existingRetryButton.remove();
+    }
+
+    // Add a Retry Quiz button
+    const retryButton = document.createElement("button");
+    retryButton.textContent = "Retry Quiz";
+    retryButton.className = "btn btn-secondary mt-4 retry-button";
+    retryButton.onclick = resetQuiz; // Link to the resetQuiz function
+    quizContainer.appendChild(retryButton);
+
+    const generatedSection = document.getElementById("generated");
+    generatedSection.classList.remove("hidden");
+    generatedSection.classList.add("fade-in");
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
     const title = document.querySelector(".rotating-title");
-    const letters = [...title.textContent.trim()]; // Convert text to an array of characters and trim whitespace
+    const letters = [...title.textContent.trim()];
     title.innerHTML = letters
-        .map((letter) => {
-            // Wrap each non-space character in <span>, keep spaces as &nbsp;
-            return letter === " " ? "&nbsp;" : `<span>${letter}</span>`;
-        })
-        .join(""); // Join the characters back together
+        .map((letter) => (letter === " " ? "&nbsp;" : `<span>${letter}</span>`))
+        .join("");
 });
 
 function clearSections() {
-    // Clear the Answer section
     document.getElementById("answer").innerHTML = "";
-
-    // Clear the Quiz section
     document.getElementById("quiz").innerHTML = "";
-
-    // Hide the generated content section
     const generatedSection = document.getElementById("generated");
     generatedSection.classList.add("hidden");
 }
-

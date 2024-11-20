@@ -7,7 +7,7 @@ import re
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 # OpenAI client (replace with your API key)
-client = OpenAI(api_key="????")
+client = OpenAI(api_key="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")
 
 # In-memory cache to store embeddings and responses
 cache = {}
@@ -85,7 +85,7 @@ def generate_answer_with_quiz(query, content, strictness):
             prompt = (
                 f"Provide a concise and accurate answer to the following question using only the information provided in the content. "
                 f"If the content does not provide enough information to answer the question, respond with: "
-                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the provided link for more details.' "
+                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the full article for more details or try Flexible strictness.' "
                 f"Do not add any external information or assumptions.\n\n"
                 f"Question: '{query}'\n\nContent: {content}"
             )
@@ -94,7 +94,7 @@ def generate_answer_with_quiz(query, content, strictness):
                 f"Provide a detailed and thoughtful answer to the following question using the content provided. "
                 f"You may infer additional information if needed. "
                 f"If the content does not provide enough information, respond with: "
-                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the provided link for more details.' "
+                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the full article for more details.' "
                 f"The answer should sound natural and self-contained.\n\n"
                 f"Question: '{query}'\n\nContent: {content}"
             )
