@@ -194,7 +194,8 @@ function saveConversation() {
             return;
         }
 
-        if (savedItem.answer.trim() === answer.trim()) {
+        if (savedItem.query.trim() === query.trim() && 
+            savedItem.answer.trim() === answer.trim()) {
             showErrorModal("Duplicate", "This answer is already saved!");
             return;
         }
