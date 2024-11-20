@@ -172,40 +172,81 @@ function checkAnswer(correctAnswer, userAnswer, element, questionDiv) {
     feedbackModal.show();
 }
 
-
-function saveConversation() {
+async function saveConversation() {
     const query = document.getElementById("query").value;
     const answer = document.getElementById("answer").innerText;
     const quiz = document.getElementById("quiz").innerHTML;
     const strictness = document.getElementById("strictness").value;
+    const articleLink = document.getElementById("article-link").href;
 
     if (!query || !answer) {
         showErrorModal("Error", "Please generate an answer before saving!");
         return;
     }
 
-    for (const savedItem of savedConversations) {
-        console.log(savedItem.answer, answer);
-        if (
-            savedItem.query.trim() === query.trim() && 
-            savedItem.strictness === strictness
-        ) {
-            showErrorModal("Duplicate", "This conversation is already saved!");
-            return;
-        }
+    const response = await fetch("/save_conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, answer, quiz, strictness, link: articleLink }),
+    });
 
-        if (savedItem.query.trim() === query.trim() && 
-            savedItem.answer.trim() === answer.trim()) {
-            showErrorModal("Duplicate", "This answer is already saved!");
-            return;
-        }
-        
+    const result = await response.json();
+    if (response.ok) {
+        await loadSavedConversations(); // Reload the saved conversations
+    } else {
+        showErrorModal("Error", result.error || "Failed to save conversation");
     }
+}
 
-    const savedItem = { query, answer, quiz, strictness};
-    savedConversations.push(savedItem);
+async function loadSavedConversations() {
+    const response = await fetch("/get_saved_conversations");
+    const savedConversations = await response.json();
 
-    updateSavedConversations();
+    if (response.ok) {
+        const savedList = document.getElementById("saved-conversations");
+        savedList.innerHTML = ""; // Clear the existing list
+
+        savedConversations.forEach((conversation) => {
+            const listItem = document.createElement("li");
+            listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
+
+            const listItemText = document.createElement("span");
+            listItemText.textContent = `${conversation.query} - ${conversation.strictness}`;
+            listItem.appendChild(listItemText);
+
+            const deleteButton = document.createElement("button");
+            deleteButton.classList.add("btn", "btn-danger", "btn-sm");
+            deleteButton.innerHTML = `<i class="bi bi-trash"></i>`;
+            deleteButton.onclick = () => deleteConversation(conversation.query, conversation.strictness);
+            listItem.appendChild(deleteButton);
+
+            // Attach click event to load the saved conversation
+            listItemText.addEventListener("click", () => {
+                loadConversation(conversation); // Pass the full conversation object
+            });
+
+            savedList.appendChild(listItem);
+        });
+    } else {
+        showErrorModal("Error", savedConversations.error || "Failed to load conversations");
+    }
+}
+
+
+async function deleteConversation(query, strictness) {
+    // Send a delete request to the backend
+    const response = await fetch("/delete_conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, strictness }), // Send the query and strictness to identify the conversation
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+        await loadSavedConversations(); // Reload the list from the backend after deletion
+    } else {
+        showErrorModal("Error", result.error || "Failed to delete conversation");
+    }
 }
 
 
@@ -249,33 +290,43 @@ function updateSavedConversations() {
     });
 }
 
-// Function to delete a conversation
-function deleteConversation(index) {
-    // Remove the selected conversation from the array
-    savedConversations.splice(index, 1);
+document.addEventListener("DOMContentLoaded", async () => {
+    const title = document.querySelector(".rotating-title");
+    const letters = [...title.textContent.trim()];
+    title.innerHTML = letters
+        .map((letter) => (letter === " " ? "&nbsp;" : `<span>${letter}</span>`))
+        .join("");
 
-    // Update the list after deletion
-    updateSavedConversations();
-}
+    await loadSavedConversations(); // Load saved conversations
+});
 
+function loadConversation(conversation) {
+    // Update the query input field
+    document.getElementById("query").value = conversation.query;
 
-function loadConversation(index) {
-    const savedItem = savedConversations[index];
-    document.getElementById("query").value = savedItem.query;
-    document.getElementById("answer").innerText = savedItem.answer;
+    // Update the answer section
+    document.getElementById("answer").innerText = conversation.answer;
 
-    // Update strictness dropdown
+    // Update the strictness dropdown
     const strictnessDropdown = document.getElementById("strictness");
-    strictnessDropdown.value = savedItem.strictness;
+    strictnessDropdown.value = conversation.strictness;
 
-    // Parse the quiz data for rendering
+    // Parse and render the quiz data
     const quizContainer = document.getElementById("quiz");
-    quizContainer.innerHTML = savedItem.quiz; // Load the saved quiz HTML directly into the container
+    quizContainer.innerHTML = conversation.quiz;
 
-    // Reinitialize button functionality in the loaded quiz
+    // Update the article link
+    const articleLink = document.getElementById("article-link");
+    if (conversation.link && conversation.link !== "No link available") {
+        articleLink.href = conversation.link;
+        articleLink.classList.remove("hidden");
+    } else {
+        articleLink.classList.add("hidden");
+    }
+
+    // Reinitialize button functionality for True/False and Multiple Choice questions
     const questionDivs = quizContainer.querySelectorAll(".question");
     questionDivs.forEach((questionDiv) => {
-        // Reinitialize buttons for True/False and Multiple Choice questions
         const buttons = questionDiv.querySelectorAll("button:not(.retry-button)");
         buttons.forEach((button) => {
             const correctAnswer = button.getAttribute("data-correct-answer");
@@ -316,15 +367,6 @@ function loadConversation(index) {
     generatedSection.classList.remove("hidden");
     generatedSection.classList.add("fade-in");
 }
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    const title = document.querySelector(".rotating-title");
-    const letters = [...title.textContent.trim()];
-    title.innerHTML = letters
-        .map((letter) => (letter === " " ? "&nbsp;" : `<span>${letter}</span>`))
-        .join("");
-});
 
 function clearSections() {
     document.getElementById("answer").innerHTML = "";
