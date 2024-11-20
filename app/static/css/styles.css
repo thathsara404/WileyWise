@@ -142,3 +142,11 @@ div {
     align-items: center;
     z-index: 1050; /* Ensure it overlays other content */
 }
+
+#saved-conversations > li {
+    margin-bottom: 5px;
+}
+
+#saved-conversations > li:hover {
+    cursor: pointer;
+}
