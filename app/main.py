@@ -7,8 +7,8 @@ app.secret_key = 'your_secret_key_here'  # Secret key for session management
 
 # In-memory user data with saved conversations
 user_data = {
-    "user1": {"password": "password1", "saved_conversations": []},
-    "user2": {"password": "password2", "saved_conversations": []},
+    "user1": {"name": "User One", "password": "password1", "saved_conversations": []},
+    "user2": {"name": "User Two","password": "password2", "saved_conversations": []},
 }
 
 # Load precomputed database
@@ -69,6 +69,21 @@ def get_saved_conversations():
     username = session["username"]
     return jsonify(user_data[username]["saved_conversations"])  # Return saved conversations as JSON
 
+
+@app.route("/get_user_details", methods=["GET"])
+def get_user_details():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    username = session["username"]
+    # Retrieve user details
+    user_details = {
+        "username": username,
+        "name": user_data[username].get("name", "Unknown"),
+        "saved_conversations_count": len(user_data[username]["saved_conversations"])
+    }
+    # Return as JSON object
+    return jsonify(user_details)
 
 @app.route("/delete_conversation", methods=["POST"])
 def delete_conversation():
