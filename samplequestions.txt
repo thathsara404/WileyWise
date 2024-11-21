@@ -1,3 +1,7 @@
+does wind power renewable energy source? yes or no?
+
+give me a content related to sustainable agriculture 
+
 Does wind power reduce carbon emmision? | use strict mode or flexible
 
 what are renewable power resources? | use flexible
@@ -11,3 +15,6 @@ what is sustainable agriculture? | use strict mode or flexible
 what promote sustainable agriculture? | use strict mode or flexible
 
 what is a good agriculture? | use strict mode or flexible
+
+does wind power save environment? | use strict mode or flexible
+
