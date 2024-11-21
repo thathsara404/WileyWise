@@ -7,7 +7,7 @@ import re
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 # OpenAI client (replace with your API key)
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="")
 
 # In-memory cache to store embeddings and responses
 cache = {}
@@ -115,6 +115,9 @@ def generate_answer_with_quiz(query, content, strictness):
         answer = answer_response.choices[0].message.content.strip()
         logging.info("Answer generation completed successfully.")
         logging.debug(f"Generated answer: {answer}")
+
+        # Promote the full article
+        answer += "\n\nThis appears to be a good fit for the content you’re looking for. Click the button bellow to explore the full article for more details."
 
         # Generate a quiz using the ChatCompletion API
         logging.info("Sending request to OpenAI ChatCompletion API for quiz generation.")
