@@ -208,20 +208,31 @@ async function loadSavedConversations() {
 
         savedConversations.forEach((conversation) => {
             const listItem = document.createElement("li");
-            listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
+            listItem.classList.add("list-group-item", "d-flex", "flex-column", "position-relative", "align-items-start");
 
-            const listItemText = document.createElement("span");
-            listItemText.textContent = `${conversation.query} - ${conversation.strictness}`;
-            listItem.appendChild(listItemText);
+            // Strictness label
+            const strictnessLabel = document.createElement("span");
+            strictnessLabel.textContent = conversation.strictness;
+            strictnessLabel.classList.add("badge", "bg-secondary", "mb-1"); // Gray badge with margin below
+            listItem.appendChild(strictnessLabel);
 
+            // Query text
+            const queryText = document.createElement("span");
+            queryText.textContent = conversation.query;
+            listItem.appendChild(queryText);
+
+            // Delete button
             const deleteButton = document.createElement("button");
-            deleteButton.classList.add("btn", "btn-danger", "btn-sm");
+            deleteButton.classList.add("btn", "btn-danger", "btn-sm", "position-absolute", "bottom-0", "end-0", "me-2", "mb-2");
             deleteButton.innerHTML = `<i class="bi bi-trash"></i>`;
-            deleteButton.onclick = () => deleteConversation(conversation.query, conversation.strictness);
+            deleteButton.onclick = (e) => {
+                e.stopPropagation(); // Prevent triggering the loadConversation event
+                deleteConversation(conversation.query, conversation.strictness);
+            };
             listItem.appendChild(deleteButton);
 
             // Attach click event to load the saved conversation
-            listItemText.addEventListener("click", () => {
+            listItem.addEventListener("click", () => {
                 loadConversation(conversation); // Pass the full conversation object
             });
 
@@ -298,7 +309,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         .join("");
 
     await loadSavedConversations(); // Load saved conversations
+    await loadUserData(); // Load user data
 });
+
+async function loadUserData() {
+    const userDataReq = await fetch("/get_user_details");
+    const userData = await userDataReq.json();
+    if (userData) {
+        document.getElementById("username").innerHTML = userData.username;
+    }
+}
 
 function loadConversation(conversation) {
     // Update the query input field
