@@ -208,27 +208,40 @@ async function loadSavedConversations() {
 
         savedConversations.forEach((conversation) => {
             const listItem = document.createElement("li");
-            listItem.classList.add("list-group-item", "d-flex", "flex-column", "position-relative", "align-items-start");
+            listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
+
+            // Container for label and text
+            const textContainer = document.createElement("div");
+            textContainer.classList.add("d-flex", "flex-column");
 
             // Strictness label
             const strictnessLabel = document.createElement("span");
             strictnessLabel.textContent = conversation.strictness;
-            strictnessLabel.classList.add("badge", "bg-secondary", "mb-1"); // Gray badge with margin below
-            listItem.appendChild(strictnessLabel);
+            strictnessLabel.classList.add("badge", "bg-secondary", "mb-1");
+            strictnessLabel.style.display = "inline-block";
+            strictnessLabel.style.whiteSpace = "nowrap"; // Prevent wrapping
+            strictnessLabel.style.width = "max-content"; // Match width to text
+            strictnessLabel.style.padding = "0.25em 0.5em"; // Ensure consistent spacing
+            textContainer.appendChild(strictnessLabel);
 
             // Query text
             const queryText = document.createElement("span");
             queryText.textContent = conversation.query;
-            listItem.appendChild(queryText);
+            textContainer.appendChild(queryText);
+
+            // Append the text container to the list item
+            listItem.appendChild(textContainer);
 
             // Delete button
             const deleteButton = document.createElement("button");
-            deleteButton.classList.add("btn", "btn-danger", "btn-sm", "position-absolute", "bottom-0", "end-0", "me-2", "mb-2");
+            deleteButton.classList.add("btn", "btn-danger", "btn-sm");
             deleteButton.innerHTML = `<i class="bi bi-trash"></i>`;
             deleteButton.onclick = (e) => {
                 e.stopPropagation(); // Prevent triggering the loadConversation event
                 deleteConversation(conversation.query, conversation.strictness);
             };
+
+            // Append the delete button to the list item
             listItem.appendChild(deleteButton);
 
             // Attach click event to load the saved conversation

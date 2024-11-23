@@ -1,5 +1,11 @@
 does wind power renewable energy source? yes or no?
 
+give me a content to read about sustainable agriculture | use strict mode or flexible
+
+why does cancer occur? | use flexible
+
+what are the trends of global economy? | use strict
+
 give me a content related to sustainable agriculture 
 
 Does wind power reduce carbon emmision? | use strict mode or flexible
