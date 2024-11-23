@@ -1,5 +1,5 @@
 from flask import Flask, render_template, send_from_directory, request, jsonify, abort, session, redirect, url_for
-from app.utils import find_relevant_content, generate_answer_with_quiz
+from app.utils import find_relevant_content, generate_answer_with_quiz, transcribe_audio_util
 import pickle
 
 app = Flask(__name__)
@@ -152,6 +152,28 @@ def ask():
         }
 
     return jsonify(response)
+
+@app.route("/transcribe", methods=["POST"])
+def transcribe_audio():
+    try:
+        if not session.get('logged_in'):
+            return jsonify({"error": "Unauthorized"}), 401  # Unauthorized if not logged in
+
+        # Check if a file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        audio_file = request.files["file"]  # Get the FileStorage object
+        language = request.form.get("language", "en")  # Default language is English
+
+        # Call the transcription utility function
+        transcription = transcribe_audio_util(audio_file, language)
+
+        # Return the transcription as JSON
+        return jsonify(transcription), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)

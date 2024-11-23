@@ -16,6 +16,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
     <script src="/static/js/script.js" defer></script>
+    <script src="/static/js/voiceAgent.js" defer></script>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 
@@ -73,9 +74,20 @@
                             <option value="flexible">Flexible</option>
                         </select>
                     </div>
-                    <button class="btn btn-primary" onclick="askQuestion()">Ask</button>
-                    <button class="btn btn-secondary" onclick="clearSections()">Clear</button>
-                    <button class="btn btn-success" onclick="saveConversation()">Save</button>
+                    <button class="btn btn-primary" onclick="askQuestion()">
+                        <i class="bi bi-question-circle"></i> Ask
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearSections()">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                    <button class="btn btn-success" onclick="saveConversation()">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <button id="start-agent" class="mic-btn">
+                        <i class="bi bi-mic-fill"></i>
+                    </button>
+                    <span id="status" class="me-3">Click the microphone to begin a voice conversation.</span>
+                    <div id="response"></div>
                     <div id="generated" class="hidden">
                         <h2 class="mt-4">Answer:</h2>
                         <div id="answer" class="p-3 bg-light border rounded"></div>

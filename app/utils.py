@@ -3,6 +3,7 @@ from sentence_transformers import SentenceTransformer
 from scipy.spatial.distance import cosine
 import logging
 import re
+import io
 
 # Sentence-BERT model
 model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -85,7 +86,7 @@ def generate_answer_with_quiz(query, content, strictness):
             prompt = (
                 f"Provide a concise and accurate answer to the following question using only the information provided in the content. "
                 f"If the content does not provide enough information to answer the question, respond with: "
-                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the full article for more details or try Flexible strictness.' "
+                f"'Wiley Wise cannot provide a direct answer to this question. Please refer to the full article for more details or try Flexible strictness.' "
                 f"Do not add any external information or assumptions.\n\n"
                 f"Question: '{query}'\n\nContent: {content}"
             )
@@ -94,7 +95,7 @@ def generate_answer_with_quiz(query, content, strictness):
                 f"Provide a detailed and thoughtful answer to the following question using the content provided. "
                 f"You may infer additional information if needed. "
                 f"If the content does not provide enough information, respond with: "
-                f"'Wiley Wise cannot provide a direct answer to this question based on the content provided. Please refer to the full article for more details.' "
+                f"'Wiley Wise cannot provide a direct answer to this question. Please refer to the full article for more details.' "
                 f"The answer should sound natural and self-contained.\n\n"
                 f"Question: '{query}'\n\nContent: {content}"
             )
@@ -228,3 +229,32 @@ def find_relevant_content(query, database):
             "link": None
         }
 
+def transcribe_audio_util(file_storage, language="en"):
+    """
+    Transcribes an audio file using OpenAI's Whisper API.
+    
+    Args:
+        audio_file: File-like object of the audio to transcribe.
+        language: The language of the audio for transcription (default is 'en').
+
+    Returns:
+        dict: Transcription result from OpenAI API.
+    """
+    try:
+        logging.info("Sending audio file for transcription.")
+
+        audio_bytes = file_storage.read()
+        audio_file = io.BytesIO(audio_bytes)  # Create a file-like object from bytes
+        audio_file.name = file_storage.filename  # Set a name attribute for compatibility
+
+        response = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            language=language
+        )
+        logging.info("Transcription successful.")
+         # Ensure response is a dictionary
+        return response if isinstance(response, dict) else response.to_dict()
+    except Exception as e:
+        logging.error("Error during transcription.", exc_info=True)
+        raise e

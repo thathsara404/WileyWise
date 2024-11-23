@@ -142,3 +142,28 @@ div {
 #saved-conversations > li:hover {
     cursor: pointer;
 }
+
+/* Styles for the microphone button */
+.mic-btn {
+    width: 60px;
+    height: 60px;
+    border: none;
+    border-radius: 50%;
+    background-color: #007bff; /* Blue background */
+    color: white; /* White icon */
+    font-size: 24px;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, background-color 0.3s;
+}
+
+.mic-btn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    transform: scale(1.1); /* Slightly larger on hover */
+}
+
+.mic-btn:active {
+    transform: scale(0.9); /* Slightly smaller when clicked */
+}
