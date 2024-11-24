@@ -23,16 +23,28 @@ async function processVoiceAgent() {
             updateMicButton("speaking"); // Change the button color
             speakText("Please tell me your question.");
             document.getElementById("query").value = "";
+            
+            await waitConversation();
             status.textContent = "Listening for your question...";
+
             const questionAudio = await recordAudio();
+
             const transcription = await transcribeAudio(questionAudio, "en");
             currentQuestion = transcription.text.trim();
 
             // Validate the transcription
-            if (!currentQuestion || currentQuestion.toLowerCase() === "thank you very much") {
+            if (!currentQuestion) {
                 stopSpeaking(); // Stop speech
-                speakText("I couldn't understand your question. Please try again.");
-                status.textContent = "Could not understand your question. Please try again.";
+                speakText("I ould not determine your question. Please try again.");
+                status.textContent = "Please try again.";
+                isProcessing = false;
+                startButton.disabled = false; // Re-enable the microphone button
+                updateMicButton("default"); // Reset button color
+                return;
+            } else if (currentQuestion.toLowerCase().includes("terminate")) {
+                stopSpeaking(); // Stop speech
+                speakText("I'm stopping the current conversation as you wish. Let's have another conversation soon!");
+                status.textContent = "Let's have an another conversation soon!";
                 isProcessing = false;
                 startButton.disabled = false; // Re-enable the microphone button
                 updateMicButton("default"); // Reset button color
@@ -49,21 +61,41 @@ async function processVoiceAgent() {
             setTimeout(processVoiceAgent, 1000); // Proceed to next step
         } else if (agentStep === 1) {
             // Step 2: Ask for strictness
-            status.textContent = "Listening for strictness preference...";
-            const strictnessAudio = await recordAudio();
-            const transcription = await transcribeAudio(strictnessAudio, "en");
-            const strictness = transcription.text.toLowerCase().includes("strict") ? "strict" : "flexible";
 
+            await waitConversation();
+            status.textContent = "Listening for strictness preference...";
+            const strictnessAudio = await recordAudio(3000);
+
+            const transcription = await transcribeAudio(strictnessAudio, "en");
+            let strictness = transcription.text.trim();
+            if (strictness.toLowerCase().includes("strict")) {
+                strictness = "strict";
+            } else if (strictness.toLowerCase().includes("flexible")) {
+                strictness = "flexible";
+            }
             // Validate strictness
             if (!strictness) {
                 stopSpeaking(); // Stop speech
-                speakText("I couldn't determine your preference. Defaulting to flexible strictness.");
-                status.textContent = "Could not determine strictness. Defaulting to 'flexible'.";
-            } else {
+                speakText("I couldn't determine your preference. Please try again the strictness.");
+                status.textContent = "Please press mic and tell the strictness.";
+                isProcessing = false;
+                startButton.disabled = false; // Re-enable the microphone button
+                updateMicButton("default"); // Reset button color
+                return;
+            } else if(strictness.toLowerCase().includes("terminate")) {
                 stopSpeaking(); // Stop speech
-                speakText(`You chose ${strictness} strictness. Fetching your answer now.`);
-                status.textContent = `You chose: ${strictness}. Fetching the answer...`;
+                speakText("I'm stopping the current conversation as you wish. Let's have another conversation soon!");
+                status.textContent = "Let's have an another conversation soon!";
+                isProcessing = false;
+                startButton.disabled = false; // Re-enable the microphone button
+                updateMicButton("default"); // Reset button color
+                agentStep = 0; // Reset agent for next use
+                return;
             }
+
+            stopSpeaking(); // Stop speech
+            speakText(`You chose ${strictness} strictness. Fetching your answer now.`);
+            status.textContent = `You chose: ${strictness}. Fetching the answer...`;
 
             // Set the strictness dropdown value
             const strictnessDropdown = document.getElementById("strictness");
@@ -132,7 +164,7 @@ function updateMicButton(state) {
     }
 }
 
-async function recordAudio() {
+async function recordAudio(recordTime = 5000) {
     if (isRecording) return; // Prevent multiple recordings simultaneously
 
     isRecording = true;
@@ -152,7 +184,7 @@ async function recordAudio() {
         };
 
         mediaRecorder.start();
-        setTimeout(() => mediaRecorder.stop(), 5000); // Record for 5 seconds
+        setTimeout(() => mediaRecorder.stop(), recordTime);
     });
 }
 
@@ -183,3 +215,8 @@ startButton.addEventListener("click", async () => {
         await processVoiceAgent();
     }
 });
+
+async function waitConversation() {
+    // Wait for 1 second before starting the recording
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+}

@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+
+actor User
+participant Frontend
+participant Backend
+participant "AI Logic" as AI
+
+' Question Answering Flow
+User -> Frontend: Submit Question
+Frontend -> Backend: POST /ask
+Backend -> AI: Process Question
+AI --> Backend: Provide Answer
+Backend --> Frontend: Return Answer
+Frontend --> User: Display Answer
+
+' Save Conversation Flow
+User -> Frontend: Save Conversation
+Frontend -> Backend: POST /save_conversation
+Backend --> Frontend: Acknowledge Save
+
+' Retrieve Conversations Flow
+User -> Frontend: View Saved Conversations
+Frontend -> Backend: GET /get_saved_conversations
+Backend --> Frontend: Send Conversations
+Frontend --> User: Display Conversations
+
+' Delete Conversation Flow
+User -> Frontend: Delete a Conversation
+Frontend -> Backend: DELETE /delete_conversation
+Backend --> Frontend: Confirm Deletion
+Frontend --> User: Show Confirmation
+
+' Audio Transcription Flow
+User -> Frontend: Upload Audio
+Frontend -> Backend: POST /transcribe
+Backend -> AI: Transcribe Audio
+AI --> Backend: Return Transcription
+Backend --> Frontend: Provide Transcription
+Frontend --> User: Display Text
+@enduml
