@@ -62,7 +62,7 @@ div {
 .rotating-title {
     display: inline-block;
     font-family: "Georgia", "Times New Roman", serif; /* Serif font for professional style */
-    font-size: 48px; /* Matches the size of the Wiley logo */
+    font-size: 45px; /* Matches the size of the Wiley logo */
     font-weight: bold; /* Bold letters */
     color: #000000; /* Black text color */
     letter-spacing: 2px; /* Slight spacing between letters */
