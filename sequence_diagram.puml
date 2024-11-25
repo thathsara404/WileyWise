@@ -18,11 +18,21 @@ Backend --> Frontend: Return User
 Frontend --> User: Display Main Page
 
 ' Question Answering Flow
-User -> Frontend: Submit Question
-Frontend -> Backend: POST /ask
 alt User is Logged In
+
+    ' Retrieve Conversations Flow
+    User -> Frontend: View Saved Conversations
+    Frontend -> Backend: GET /conversations
+    Backend -> DB: Retrieve Conversations
+    DB --> Backend: Provide Conversations
+    Backend --> Frontend: Send Conversations
+    Frontend --> User: Display Conversations
+
+    User -> Frontend: Submit Question
+    Frontend -> Backend: POST /ask
     Backend -> AI: Process Question
     AI -> Redis: Find Matching Content
+
     alt Found Matching Content
         Redis --> AI: Return Matching Excerpt Embedding
         AI --> Backend: Provide Matching Content
@@ -45,43 +55,37 @@ alt User is Logged In
     end
     Backend --> Frontend: Return Response
     Frontend --> User: Display Result
+
+    ' Save Conversation Flow
+    User -> Frontend: Save Conversation
+    Frontend -> Backend: POST /save_conversation
+    Backend -> DB: Save Conversation
+    DB --> Backend: Acknowledge Save
+    Backend --> Frontend: Acknowledge Save
+
+    ' Delete Conversation Flow
+    User -> Frontend: Delete a Conversation
+    Frontend -> Backend: DELETE /delete_conversation
+    Backend -> DB: Delete Conversation
+    DB --> Backend: Acknowledge Deletion
+    Backend --> Frontend: Confirm Deletion
+    Frontend --> User: Show Confirmation
+
+    ' Audio Transcription Flow
+    User -> Frontend: Upload Audio
+    Frontend -> Backend: POST /transcribe
+    Backend -> AI: Transcribe Audio
+    AI -> API: Transcribe Audio
+    API --> AI: Transcription
+    AI --> Backend: Return Transcription
+    Backend --> Frontend: Provide Transcription
+    Frontend -> Backend: POST/ask
+    Backend --> Frontend: Return Response
+    Frontend --> User: Display Result
+    
 else User is Not Logged In
     Backend --> Frontend: Return Error 401
     Frontend --> User: Redirect to Login
 end
 
-' Save Conversation Flow
-User -> Frontend: Save Conversation
-Frontend -> Backend: POST /save_conversation
-Backend -> DB: Save Conversation
-DB --> Backend: Acknowledge Save
-Backend --> Frontend: Acknowledge Save
-
-' Retrieve Conversations Flow
-User -> Frontend: View Saved Conversations
-Frontend -> Backend: GET /get_saved_conversations
-Backend -> DB: Retrieve Conversations
-DB --> Backend: Provide Conversations
-Backend --> Frontend: Send Conversations
-Frontend --> User: Display Conversations
-
-' Delete Conversation Flow
-User -> Frontend: Delete a Conversation
-Frontend -> Backend: DELETE /delete_conversation
-Backend -> DB: Delete Conversation
-DB --> Backend: Acknowledge Deletion
-Backend --> Frontend: Confirm Deletion
-Frontend --> User: Show Confirmation
-
-' Audio Transcription Flow
-User -> Frontend: Upload Audio
-Frontend -> Backend: POST /transcribe
-Backend -> AI: Transcribe Audio
-AI -> API: Transcribe Audio
-API --> AI: Transcription
-AI --> Backend: Return Transcription
-Backend --> Frontend: Provide Transcription
-Frontend -> Backend: POST/ask
-Backend --> Frontend: Return Response
-Frontend --> User: Display Result
 @enduml
